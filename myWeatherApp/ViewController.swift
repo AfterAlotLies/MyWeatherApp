@@ -10,26 +10,28 @@ import UIKit
 class ViewController: UIViewController, UICollectionViewDelegate {
 
     //topLabels
-    @IBOutlet weak var cityLabel: UILabel!
-    @IBOutlet weak var degreesLabel: UILabel!
-    @IBOutlet weak var characteristicLabel: UILabel!
-    @IBOutlet weak var feelsLikeLabel: UILabel!
+    @IBOutlet private weak var cityLabel: UILabel!
+    @IBOutlet private weak var degreesLabel: UILabel!
+    @IBOutlet private weak var characteristicLabel: UILabel!
+    @IBOutlet private weak var feelsLikeLabel: UILabel!
 
     //tableView + collectionView
-    @IBOutlet weak var tableView: UITableView!
-    @IBOutlet weak var collectionView: UICollectionView!
-    
-    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet private weak var tableView: UITableView!
+    @IBOutlet private weak var collectionView: UICollectionView!
+    @IBOutlet private weak var scrollView: UIScrollView!
     
     //arrays for tableView
-    var namesOfDaysWeekArray = [String]()
-    var forecastMinTempADayArray = [Int]()
-    var forecastMaxTempADayArray = [Int]()
+    private var namesOfDaysWeekArray = [String]()
+    private var forecastMinTempADayArray = [Int]()
+    private var forecastMaxTempADayArray = [Int]()
 
     //arrays for collectionView
-    var collectionHoursArray = [String]()
-    var collectionDegreesArray = [Int]()
-    var collectionCharacteristicWeahter = [String]()
+    private var collectionHoursArray = [String]()
+    private var collectionDegreesArray = [Int]()
+    private var collectionCharacteristicWeahter = [String]()
+    
+    private var dateFormatter: DateFormatter = DateFormatter()
+    private var currentTimeForForecast: String = ""
 
     private enum WeatherType: String {
         
@@ -73,6 +75,7 @@ private extension ViewController {
         tableView.dataSource = self
         collectionView.delegate = self
         collectionView.dataSource = self
+        dateFormatter = DateFormatter()
     }
     
     func setBackground() {
@@ -127,73 +130,16 @@ private extension ViewController {
                             self.fillTopLabels(jsonResponse)
 
                             //geting info for weather forecast for 6 days
-                            let dateChecking = DateFormatter()
-                            dateChecking.dateFormat = "yyyy-MM-dd"
-                            let currentTimeForForecast = dateChecking.string(from: Date())
+                            self.dateFormatter.dateFormat = "yyyy-MM-dd"
+                            self.currentTimeForForecast = self.dateFormatter.string(from: Date())
 
                             //adding to array days of week && min temp in a day
                             if let forecast = jsonResponse["forecast"] as? [String : Any] {
                                 if let forecastDay = forecast["forecastday"] as? [[String : Any]] {
                                     for day in forecastDay {
-                                        if var futureDate = day["date"] as? String {
-                                            if futureDate == currentTimeForForecast {
-                                                self.namesOfDaysWeekArray.append("Сегодня")
-                                            } else {
-                                                let dateConvertor = DateFormatter()
-                                                dateConvertor.dateFormat = "EEEE"
-                                                let changeToDayWeek = dateConvertor.string(from: dateChecking.date(from: futureDate)!)
-                                                futureDate = changeToDayWeek.capitalized
-                                                self.namesOfDaysWeekArray.append(futureDate)
-                                            }
-                                        }
-                                        if let futureTempCast = day["day"] as? [String : Any] {
-                                            if let futureMinTemp = futureTempCast["mintemp_c"] as? Double {
-                                                self.forecastMinTempADayArray.append(Int(futureMinTemp))
-                                            }
-                                            if let futureMaxTemp = futureTempCast["maxtemp_c"] as? Double {
-                                                self.forecastMaxTempADayArray.append(Int(futureMaxTemp))
-                                            }
-                                        }
-
-                                        //adding to array all hours for the current day && degrees
-                                        if let hourInfo = day["hour"] as? [[String : Any]] {
-                                            for hourDate in hourInfo {
-                                                if let time = hourDate["time"] as? String {
-                                                    if let temp = hourDate["temp_c"] as? Double {
-                                                        if let condition = hourDate["condition"] as? [String : Any] {
-                                                            if let text = condition["text"] as? String {
-                                                                let dateConvertor = DateFormatter()
-                                                                dateConvertor.dateFormat = "yyyy-MM-dd HH:mm"
-
-                                                                //getting hour from json and comparing with current hour && degrees
-                                                                if let date = dateConvertor.date(from: time) {
-                                                                    let calendar = Calendar.current
-                                                                    let hour = calendar.component(.hour, from: date)
-                                                                    let currentHour = calendar.component(.hour, from: Date())
-                                                                    if calendar.isDate(date, inSameDayAs: Date()) && currentHour <= hour {
-
-                                                                        //adding to array
-                                                                        if currentHour == hour {
-                                                                            self.collectionHoursArray.append("Сейчас")
-                                                                            self.collectionDegreesArray.append(Int(temp))
-                                                                            self.collectionCharacteristicWeahter.append(text)
-                                                                        } else {
-                                                                            self.collectionHoursArray.append(String(hour))
-                                                                            self.collectionDegreesArray.append(Int(temp))
-                                                                            self.collectionCharacteristicWeahter.append(text)
-                                                                        }
-                                                                    } else if calendar.isDate(date, inSameDayAs: Calendar.current.date(byAdding: .day, value: 1, to: Date())!) {
-                                                                        self.collectionHoursArray.append(String(hour))
-                                                                        self.collectionDegreesArray.append(Int(temp))
-                                                                        self.collectionCharacteristicWeahter.append(text)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        self.extractDate(day)
+                                        self.extractTempForDay(day)
+                                        self.extractHours(day)
                                     }
                                 }
                             }
@@ -207,6 +153,72 @@ private extension ViewController {
             }
         }
         task.resume()
+    }
+    
+    private func extractHours(_ day : [String : Any]) {
+        if let hourInfo = day["hour"] as? [[String : Any]] {
+            for hourDate in hourInfo {
+                if let time = hourDate["time"] as? String {
+                    if let temp = hourDate["temp_c"] as? Double {
+                        if let condition = hourDate["condition"] as? [String : Any] {
+                            if let text = condition["text"] as? String {
+                                dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+
+                                //getting hour from json and comparing with current hour && degrees
+                                if let date = dateFormatter.date(from: time) {
+                                    let calendar = Calendar.current
+                                    let hour = calendar.component(.hour, from: date)
+                                    let currentHour = calendar.component(.hour, from: Date())
+                                    if calendar.isDate(date, inSameDayAs: Date()) && currentHour <= hour {
+
+                                        //adding to array
+                                        if currentHour == hour {
+                                            self.collectionHoursArray.append("Сейчас")
+                                            self.collectionDegreesArray.append(Int(temp))
+                                            self.collectionCharacteristicWeahter.append(text)
+                                        } else {
+                                            self.collectionHoursArray.append(String(hour))
+                                            self.collectionDegreesArray.append(Int(temp))
+                                            self.collectionCharacteristicWeahter.append(text)
+                                        }
+                                    } else if calendar.isDate(date, inSameDayAs: Calendar.current.date(byAdding: .day, value: 1, to: Date())!) {
+                                        self.collectionHoursArray.append(String(hour))
+                                        self.collectionDegreesArray.append(Int(temp))
+                                        self.collectionCharacteristicWeahter.append(text)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func extractDate(_ day: [String : Any]) {
+        if var futureDate = day["date"] as? String {
+            if futureDate == currentTimeForForecast {
+                namesOfDaysWeekArray.append("Сегодня")
+            } else {
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let displayingDate = dateFormatter.date(from: futureDate) ?? Date()
+                dateFormatter.dateFormat = "EEEE"
+                let changeToDayWeek = dateFormatter.string(from: displayingDate)
+                futureDate = changeToDayWeek.capitalized
+                namesOfDaysWeekArray.append(futureDate)
+            }
+        }
+    }
+    
+    private func extractTempForDay(_ day: [String : Any]) {
+        if let futureTempCast = day["day"] as? [String : Any] {
+            if let futureMinTemp = futureTempCast["mintemp_c"] as? Double {
+                self.forecastMinTempADayArray.append(Int(futureMinTemp))
+            }
+            if let futureMaxTemp = futureTempCast["maxtemp_c"] as? Double {
+                self.forecastMaxTempADayArray.append(Int(futureMaxTemp))
+            }
+        }
     }
     
     private func fillTopLabels(_ jsonResponse: Dictionary<String, Any>) {
@@ -331,4 +343,3 @@ private extension ViewController {
         collectionView.backgroundColor = .clear
     }
 }
-

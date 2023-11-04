@@ -1,0 +1,9 @@
+/* 
+  Localizable.strings
+  myWeatherApp
+
+  Created by Vyacheslav on 04.11.2023.
+  
+*/
+
+"Weather.Forecast.NextSixDays" = "Прогноз погоды на 6 дней";

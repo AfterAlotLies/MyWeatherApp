@@ -47,6 +47,9 @@ class ViewController: UIViewController, UICollectionViewDelegate {
         case sunny = "Солнечно"
         case clear = "Ясно"
         case sometimesRain = "Местами дождь"
+        case strongSnow = "Сильный снег"
+        case veryStrongSnow = "Очень сильный снег"
+        case averageSnow = "Умеренный снег"
     }
     
     override func viewDidLoad() {

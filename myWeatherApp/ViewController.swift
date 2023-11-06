@@ -79,11 +79,8 @@ private extension ViewController {
     }
     
     func setBackground() {
-        //        let charactersiticLabel = characteristicLabel.text
-        //
-        //        switch charactersiticLabel {
-        //        case "Переменная облачность":
-        if let backgroundImage = UIImage.gif(name: "backgroundGif") {
+        
+        if let backgroundImage = UIImage.gif(name: "облачностьGif") {
             let backgroundImageView = UIImageView(image: backgroundImage)
             backgroundImageView.frame = self.view.bounds
             backgroundImageView.contentMode = .scaleAspectFill

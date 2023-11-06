@@ -246,10 +246,19 @@ private extension ViewController {
 // MARK: - ViewController + UITableViewDataSource
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell()
-        var context = cell.defaultContentConfiguration()
-        context.text = namesOfDaysWeekArray[indexPath.row] + "| Мин.темп: \(forecastMinTempADayArray[indexPath.row])" + " | Макс.темп: \(forecastMaxTempADayArray[indexPath.row])"
-        cell.contentConfiguration = context
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cellPrototype", for: indexPath) as! cellPrototype
+        if namesOfDaysWeekArray.count > 0 {
+            cell.dayOfWeekLabel.text = namesOfDaysWeekArray[indexPath.row]
+        }
+        if forecastMinTempADayArray.count > 0 {
+            cell.minTempLabel.text = "Min: \(forecastMinTempADayArray[indexPath.row])"
+        }
+        if forecastMaxTempADayArray.count > 0 {
+            cell.maxTempLabel.text = "Max: \(forecastMaxTempADayArray[indexPath.row])"
+        }
+        if forecastWeatherForDayArray.count > 0 {
+            cell.weatherImage.image = getImageByState(forecastWeatherForDayArray[indexPath.row])
+        }
         cell.backgroundColor = .clear
         return cell
     }

@@ -21,6 +21,7 @@
 		1198AC552AEFA413000F2144 /* myWeatherApp.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1198AC532AEFA413000F2144 /* myWeatherApp.xcdatamodeld */; };
 		1198AC572AEFA413000F2144 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1198AC562AEFA413000F2144 /* Assets.xcassets */; };
 		1198AC5A2AEFA413000F2144 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1198AC582AEFA413000F2144 /* LaunchScreen.storyboard */; };
+		11C056AC2AF8E413001204DE /* tableViewCellPrototype.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C056AB2AF8E413001204DE /* tableViewCellPrototype.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		1198AC562AEFA413000F2144 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1198AC592AEFA413000F2144 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1198AC5B2AEFA413000F2144 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		11C056AB2AF8E413001204DE /* tableViewCellPrototype.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = tableViewCellPrototype.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +79,9 @@
 				1198AC4E2AEFA413000F2144 /* ViewController.swift */,
 				110CC3442AF3C0630062AB37 /* PostCellCollectionViewCell.swift */,
 				110CC3462AF50BF50062AB37 /* gifDescribe.swift */,
+				11C056AB2AF8E413001204DE /* tableViewCellPrototype.swift */,
+				110CC3512AF63DB10062AB37 /* LocalizedStrings.swift */,
+				110CC3532AF647BC0062AB37 /* ImageResources.swift */,
 				1198AC502AEFA413000F2144 /* Main.storyboard */,
 				1198AC562AEFA413000F2144 /* Assets.xcassets */,
 				110CC3482AF50EA30062AB37 /* backgroundGif.gif */,
@@ -85,8 +90,6 @@
 				1198AC5B2AEFA413000F2144 /* Info.plist */,
 				1198AC532AEFA413000F2144 /* myWeatherApp.xcdatamodeld */,
 				110CC3502AF63D810062AB37 /* Localizable.strings */,
-				110CC3512AF63DB10062AB37 /* LocalizedStrings.swift */,
-				110CC3532AF647BC0062AB37 /* ImageResources.swift */,
 			);
 			path = myWeatherApp;
 			sourceTree = "<group>";
@@ -171,6 +174,7 @@
 				110CC3472AF50BF50062AB37 /* gifDescribe.swift in Sources */,
 				110CC3522AF63DB10062AB37 /* LocalizedStrings.swift in Sources */,
 				110CC3542AF647BC0062AB37 /* ImageResources.swift in Sources */,
+				11C056AC2AF8E413001204DE /* tableViewCellPrototype.swift in Sources */,
 				1198AC4B2AEFA413000F2144 /* AppDelegate.swift in Sources */,
 				1198AC4D2AEFA413000F2144 /* SceneDelegate.swift in Sources */,
 			);
@@ -327,6 +331,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TA66ZBP42J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = myWeatherApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -354,6 +359,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TA66ZBP42J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = myWeatherApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

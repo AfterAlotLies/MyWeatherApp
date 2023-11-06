@@ -24,6 +24,7 @@ class ViewController: UIViewController, UICollectionViewDelegate {
     private var namesOfDaysWeekArray = [String]()
     private var forecastMinTempADayArray = [Int]()
     private var forecastMaxTempADayArray = [Int]()
+    private var forecastWeatherForDayArray = [String]()
 
     //arrays for collectionView
     private var collectionHoursArray = [String]()
@@ -90,11 +91,6 @@ private extension ViewController {
             self.view.insertSubview(backgroundImageView, at: 0)
             self.view.backgroundColor = UIColor.clear
             self.scrollView.backgroundColor = UIColor.clear
-            
-            //            }
-            //        default:
-            //            print("error")
-            //        }
         }
     }
 }
@@ -110,7 +106,7 @@ private extension ViewController {
     }
 
     func uploadInfo() {
-        let url = URL(string: "https://api.weatherapi.com/v1/forecast.json?key=53767b8f6af94b368e6122737233110&q=Novosibirsk&days=7&lang=ru")
+        let url = URL(string: "https://api.weatherapi.com/v1/forecast.json?key=ae85acc7d8bf42169ac123120230511&q=Novosibirsk&days=7&lang=ru")
 
         let session = URLSession.shared
 
@@ -173,18 +169,18 @@ private extension ViewController {
 
                                         //adding to array
                                         if currentHour == hour {
-                                            self.collectionHoursArray.append("Сейчас")
-                                            self.collectionDegreesArray.append(Int(temp))
-                                            self.collectionCharacteristicWeahter.append(text)
+                                            collectionHoursArray.append("Сейчас")
+                                            collectionDegreesArray.append(Int(temp))
+                                            collectionCharacteristicWeahter.append(text)
                                         } else {
-                                            self.collectionHoursArray.append(String(hour))
-                                            self.collectionDegreesArray.append(Int(temp))
-                                            self.collectionCharacteristicWeahter.append(text)
+                                            collectionHoursArray.append(String(hour))
+                                            collectionDegreesArray.append(Int(temp))
+                                            collectionCharacteristicWeahter.append(text)
                                         }
                                     } else if calendar.isDate(date, inSameDayAs: Calendar.current.date(byAdding: .day, value: 1, to: Date())!) {
-                                        self.collectionHoursArray.append(String(hour))
-                                        self.collectionDegreesArray.append(Int(temp))
-                                        self.collectionCharacteristicWeahter.append(text)
+                                        collectionHoursArray.append(String(hour))
+                                        collectionDegreesArray.append(Int(temp))
+                                        collectionCharacteristicWeahter.append(text)
                                     }
                                 }
                             }
@@ -194,7 +190,7 @@ private extension ViewController {
             }
         }
     }
-    
+
     private func extractDate(_ day: [String : Any]) {
         if var futureDate = day["date"] as? String {
             if futureDate == currentTimeForForecast {
@@ -209,14 +205,19 @@ private extension ViewController {
             }
         }
     }
-    
+
     private func extractTempForDay(_ day: [String : Any]) {
         if let futureTempCast = day["day"] as? [String : Any] {
-            if let futureMinTemp = futureTempCast["mintemp_c"] as? Double {
-                self.forecastMinTempADayArray.append(Int(futureMinTemp))
-            }
-            if let futureMaxTemp = futureTempCast["maxtemp_c"] as? Double {
-                self.forecastMaxTempADayArray.append(Int(futureMaxTemp))
+            if let futureWeather = futureTempCast["condition"] as? [String : Any] {
+                if let futureMinTemp = futureTempCast["mintemp_c"] as? Double {
+                    forecastMinTempADayArray.append(Int(futureMinTemp))
+                }
+                if let futureMaxTemp = futureTempCast["maxtemp_c"] as? Double {
+                    forecastMaxTempADayArray.append(Int(futureMaxTemp))
+                }
+                if let text = futureWeather["text"] as? String {
+                    forecastWeatherForDayArray.append(text)
+                }
             }
         }
     }
@@ -224,20 +225,20 @@ private extension ViewController {
     private func fillTopLabels(_ jsonResponse: Dictionary<String, Any>) {
         if let cityResponse = jsonResponse["location"] as? [String : Any] {
             if let city = cityResponse["name"] as? String {
-                self.cityLabel.text = city.localizedCapitalized
+                cityLabel.text = city.localizedCapitalized
             }
         }
         if let currentWeather = jsonResponse["current"] as? [String : Any] {
             if let tempADay = currentWeather["temp_c"] as? Int {
-                self.degreesLabel.text = "\(tempADay)°"
+                degreesLabel.text = "\(tempADay)°"
             }
             if let currentCondition = currentWeather["condition"] as? [String : Any] {
                 if let characteristicText = currentCondition["text"] as? String {
-                    self.characteristicLabel.text = characteristicText
+                    characteristicLabel.text = characteristicText
                 }
             }
             if let feelsLike = currentWeather["feelslike_c"] as? Double {
-                self.feelsLikeLabel.text = "Ощущается как \(Int(feelsLike))"
+                feelsLikeLabel.text = "Ощущается как \(Int(feelsLike))"
             }
         }
     }
@@ -270,6 +271,7 @@ extension ViewController: UITableViewDataSource {
 
 // MARK: - ViewController + UITableViewDelegate
 extension ViewController : UITableViewDelegate {
+    
     func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
@@ -288,7 +290,7 @@ extension ViewController : UITableViewDelegate {
 
 // MARK: - ViewController + UICollectionDataSource
 extension ViewController: UICollectionViewDataSource {
-    
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return 24
     }
@@ -308,47 +310,57 @@ extension ViewController: UICollectionViewDataSource {
         }
         return cell
     }
-    
-    private func getImageByState(_ characteristicWeather: String) -> UIImage? {
-        switch characteristicWeather {
-        case WeatherType.cloudsSometimes.rawValue:
-            return ImageResources.mightBeCloudyAtNight
-        case WeatherType.littleSnow.rawValue:
-            return UIImage(named: "ПеременнаяОблачностьНочь")
-        case WeatherType.littleColdRain.rawValue:
-            return UIImage(named: "СлабыйПереохлажденныйДождьНочь")
-        case WeatherType.littleDark.rawValue:
-            return UIImage(named: "ПасмурноНочь")
-        case WeatherType.cloudy.rawValue:
-            return UIImage(named: "ОблачноНочь")
-        case WeatherType.littleRainWithSnow.rawValue:
-            return UIImage(named: "НебольшойДождьСоСнегомНочь")
-        case WeatherType.sometimesSnow.rawValue:
-            return UIImage(named: "НебольшойДождьСоСнегомНочь")
-        case WeatherType.fog.rawValue:
-            return UIImage(named: "ДымкаНочь")
-        case WeatherType.coldFog.rawValue:
-            return UIImage(named: "ПереохлажденныйТуманНочь")
-        case WeatherType.sunny.rawValue:
-            return UIImage(named: "СолнечноНочь")
-        case WeatherType.clear.rawValue:
-            return UIImage(named: "СолнечноНочь")
-        case WeatherType.sometimesRain.rawValue:
-            return UIImage(named: "МестамиДождьНочь")
-        default:
-            return UIImage()
-        }
-    }
 }
 
 // MARK: - customizing tableView + collectionView
 private extension ViewController {
-    
+
     func customTableView() {
         tableView.backgroundColor = .clear
     }
 
     func customCollectionView() {
         collectionView.backgroundColor = .clear
+    }
+}
+
+// MARK: - upload images to tableView + collectionView
+extension ViewController {
+    
+    private func getImageByState(_ characteristicWeather: String) -> UIImage? {
+        switch characteristicWeather {
+        case WeatherType.cloudsSometimes.rawValue:
+            return ImageResources.mightBeCloudyAtNight
+        case WeatherType.littleSnow.rawValue:
+            return ImageResources.littleSnow
+        case WeatherType.littleColdRain.rawValue:
+            return ImageResources.littleColdRain
+        case WeatherType.littleDark.rawValue:
+            return ImageResources.littleDark
+        case WeatherType.cloudy.rawValue:
+            return ImageResources.cloudy
+        case WeatherType.littleRainWithSnow.rawValue:
+            return ImageResources.littleRainWithSnow
+        case WeatherType.sometimesSnow.rawValue:
+            return ImageResources.sometimesSnow
+        case WeatherType.fog.rawValue:
+            return ImageResources.fog
+        case WeatherType.coldFog.rawValue:
+            return ImageResources.coldFog
+        case WeatherType.sunny.rawValue:
+            return ImageResources.sunny
+        case WeatherType.clear.rawValue:
+            return ImageResources.clear
+        case WeatherType.sometimesRain.rawValue:
+            return ImageResources.sometimesRain
+        case WeatherType.strongSnow.rawValue:
+            return ImageResources.strongSnow
+        case WeatherType.veryStrongSnow.rawValue:
+            return ImageResources.veryStrongSnow
+        case WeatherType.averageSnow.rawValue:
+            return ImageResources.averageSnow
+        default:
+            return UIImage()
+        }
     }
 }

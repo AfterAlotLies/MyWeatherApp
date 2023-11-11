@@ -6,8 +6,10 @@
 //
 
 import UIKit
+import Reachability
+import CoreData
 
-class ViewController: UIViewController, UICollectionViewDelegate {
+class ViewController: UIViewController {
 
     //topLabels
     @IBOutlet private weak var cityLabel: UILabel!
@@ -34,6 +36,10 @@ class ViewController: UIViewController, UICollectionViewDelegate {
     private var dateFormatter: DateFormatter = DateFormatter()
     private var currentTimeForForecast: String = ""
 
+    private let reachability = try! Reachability()
+    
+    private var isConnected : Bool = true
+
     private enum WeatherType: String {
         
         case cloudsSometimes = "Переменная облачность"
@@ -52,7 +58,7 @@ class ViewController: UIViewController, UICollectionViewDelegate {
         case veryStrongSnow = "Очень сильный снег"
         case averageSnow = "Умеренный снег"
     }
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
@@ -61,10 +67,9 @@ class ViewController: UIViewController, UICollectionViewDelegate {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        refreshArrays()
-        uploadInfo()
         customTableView()
         customCollectionView()
+        checkForConnection()
         if characteristicLabel.text != "" {
             setBackground()
         }
@@ -77,7 +82,6 @@ private extension ViewController {
     func setup() {
         tableView.delegate = self
         tableView.dataSource = self
-        collectionView.delegate = self
         collectionView.dataSource = self
         dateFormatter = DateFormatter()
     }
@@ -91,6 +95,25 @@ private extension ViewController {
             self.view.insertSubview(backgroundImageView, at: 0)
             self.view.backgroundColor = UIColor.clear
             self.scrollView.backgroundColor = UIColor.clear
+        }
+    }
+}
+
+// MARK: - checking for wi-fi connection + upload data from API + upload data from CoreData
+extension ViewController {
+    
+    func checkForConnection() {
+        if reachability.connection == .wifi {
+            isConnected = true
+            print("Connection good")
+            refreshArrays()
+            uploadInfo()
+        } else {
+            isConnected = false
+            print("Connection bad")
+            uploadDate()
+            uploadTableViewArrays()
+            uploadCollectionViewArrays()
         }
     }
 }
@@ -112,16 +135,14 @@ private extension ViewController {
 
         let task = session.dataTask(with: url!) { data, response, error in
             if error != nil {
-                let alert = UIAlertController(title: "Error", message: error?.localizedDescription, preferredStyle: UIAlertController.Style.alert)
-                let okButton = UIAlertAction(title: "OK", style: UIAlertAction.Style.default)
-                alert.addAction(okButton)
-                self.present(alert, animated: true)
+                print(error?.localizedDescription ?? "error")
             } else {
                 if data != nil {
                     do {
                         let jsonResponse = try JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.mutableContainers) as! Dictionary<String, Any>
                         DispatchQueue.main.async { [weak self] in
                             guard let self = self else { return }
+                            deleteCoreData()
                             //geting info for top labels
                             self.fillTopLabels(jsonResponse)
 
@@ -141,10 +162,13 @@ private extension ViewController {
                             }
                             self.tableView.reloadData()
                             self.collectionView.reloadData()
+                            saveDate()
                         }
                     } catch {
                         print("error1")
                     }
+                } else {
+                    print("data is empty")
                 }
             }
         }
@@ -244,10 +268,187 @@ private extension ViewController {
     }
 }
 
+// MARK: - Save to CoreData (cash) + output CoreData + delete CoreData
+private extension ViewController {
+ 
+    func saveDate() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        let cashMainInfo = NSEntityDescription.insertNewObject(forEntityName: "CashData", into: context)
+
+        cashMainInfo.setValue(cityLabel.text, forKey: "cityName")
+        cashMainInfo.setValue(degreesLabel.text, forKey: "nowDegree")
+        cashMainInfo.setValue(characteristicLabel.text, forKey: "characteristicWeather")
+        cashMainInfo.setValue(feelsLikeLabel.text, forKey: "feelLike")
+        
+        do {
+            try context.save()
+            print("success to save top labels")
+        } catch {
+            print("can't save top labels")
+        }
+    }
+
+    func deleteCoreData() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CashData")
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            for result in results as! [NSManagedObject] {
+                context.delete(result)
+                
+                do {
+                    try context.save()
+                } catch {
+                    
+                }
+            }
+        } catch {
+            print("can't delete data")
+        }
+    }
+}
+
+// MARK: - upload from CoreData
+extension ViewController {
+    
+    func uploadDate() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CashData")
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            for result in results as! [NSManagedObject] {
+               uploadDataForTopLabels(result: result)
+            }
+        } catch {
+            print("can't upload data to top labels")
+        }
+        tableView.reloadData()
+    }
+ 
+    
+    func uploadTableViewArrays() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CashData")
+        fetchRequest.predicate = NSPredicate(format: "day != nil && minTemp != nil && maxTemp != nil && weatherTableView != nil")
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            
+            for data in results as! [NSManagedObject] {
+                uploadDataForTableView(data: data)
+            }
+        } catch {
+            print("can't upload tableView")
+        }
+        tableView.reloadData()
+    }
+    
+    func uploadCollectionViewArrays() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CashData")
+        fetchRequest.predicate = NSPredicate(format: "collectionHour != nil && collectionWeather != nil && collectionDegree != nil")
+        do {
+            let results = try context.fetch(fetchRequest)
+            
+            for data in results as! [NSManagedObject] {
+                uploadDataForColletionView(data: data)
+            }
+        } catch {
+            print("can't upload collectionView")
+        }
+        collectionView.reloadData()
+    }
+    
+    private func uploadDataForTopLabels(result : NSManagedObject) {
+        if let cityName = result.value(forKey: "cityName") as? String {
+            cityLabel.text = cityName
+        }
+        if let degree = result.value(forKey: "nowDegree") as? String {
+            degreesLabel.text = degree
+        }
+        if let characteristic = result.value(forKey: "characteristicWeather") as? String {
+            characteristicLabel.text = characteristic
+        }
+        if let feelLike = result.value(forKey: "feelLike") as? String {
+            feelsLikeLabel.text = feelLike
+        }
+    }
+    
+    private func uploadDataForTableView(data : NSManagedObject) {
+        if let day  = data.value(forKey: "day") as? String {
+            namesOfDaysWeekArray.append(day)
+        }
+        if let minTemp = data.value(forKey: "minTemp") as? Int {
+            forecastMinTempADayArray.append(minTemp)
+        }
+        if let maxTemp = data.value(forKey: "maxTemp") as? Int {
+            forecastMaxTempADayArray.append(maxTemp)
+        }
+        if let weather = data.value(forKey: "weatherTableView") as? String {
+            forecastWeatherForDayArray.append(weather)
+        }
+    }
+
+    private func uploadDataForColletionView(data : NSManagedObject) {
+        if let hour  = data.value(forKey: "collectionHour") as? String {
+            collectionHoursArray.append(hour)
+        }
+        if let weather = data.value(forKey: "collectionWeather") as? String {
+            collectionCharacteristicWeahter.append(weather)
+        }
+        if let degree = data.value(forKey: "collectionDegree") as? Int {
+            collectionDegreesArray.append(degree)
+        }
+    }
+}
+
 // MARK: - ViewController + UITableViewDataSource
 extension ViewController: UITableViewDataSource {
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cellPrototype", for: indexPath) as! cellPrototype
+        if isConnected {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "cellPrototype", for: indexPath) as! cellPrototype
+            let appDelegate = UIApplication.shared.delegate as! AppDelegate
+            let context = appDelegate.persistentContainer.viewContext
+            let cashDays = NSEntityDescription.insertNewObject(forEntityName: "CashData", into: context)
+            
+            uploadTableViewCells(cell: cell, indexPath: indexPath)
+            
+            cell.backgroundColor = .clear
+
+            if namesOfDaysWeekArray.count > indexPath.row && forecastMinTempADayArray.count > indexPath.row && forecastMaxTempADayArray.count > indexPath.row && forecastWeatherForDayArray.count > indexPath.row {
+                saveTableViewCellsToCoreData(cashDays: cashDays, indexPath: indexPath)
+            }
+
+            do {
+                try context.save()
+                print("Данные TableView успешно сохранены в Core Data")
+            } catch {
+                print("Ошибка сохранения данных TableView в Core Data: \(error)")
+            }
+
+            return cell
+        } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "cellPrototype", for: indexPath) as! cellPrototype
+            uploadTableViewCells(cell: cell, indexPath: indexPath)
+            cell.backgroundColor = .clear
+            
+            return cell
+        }
+    }
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return namesOfDaysWeekArray.count
+    }
+    
+    private func uploadTableViewCells(cell : cellPrototype, indexPath : IndexPath) {
         if namesOfDaysWeekArray.count > 0 {
             cell.dayOfWeekLabel.text = namesOfDaysWeekArray[indexPath.row]
         }
@@ -260,12 +461,13 @@ extension ViewController: UITableViewDataSource {
         if forecastWeatherForDayArray.count > 0 {
             cell.weatherImage.image = getImageByState(forecastWeatherForDayArray[indexPath.row])
         }
-        cell.backgroundColor = .clear
-        return cell
     }
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return namesOfDaysWeekArray.count
+    
+    private func saveTableViewCellsToCoreData(cashDays : NSManagedObject, indexPath : IndexPath) {
+        cashDays.setValue(namesOfDaysWeekArray[indexPath.row], forKey: "day")
+        cashDays.setValue(forecastMinTempADayArray[indexPath.row], forKey: "minTemp")
+        cashDays.setValue(forecastMaxTempADayArray[indexPath.row], forKey: "maxTemp")
+        cashDays.setValue(forecastWeatherForDayArray[indexPath.row], forKey: "weatherTableView")
     }
 }
 
@@ -296,11 +498,38 @@ extension ViewController: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "postCell", for: indexPath) as! PostCellCollectionViewCell
+        if isConnected {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "postCell", for: indexPath) as! PostCellCollectionViewCell
+            let appDelegate = UIApplication.shared.delegate as! AppDelegate
+            let context = appDelegate.persistentContainer.viewContext
+            let cashDays = NSEntityDescription.insertNewObject(forEntityName: "CashData", into: context)
+
+            uploadCollectionViewLabels(cell: cell, indexPath: indexPath)
+
+            if collectionHoursArray.count > indexPath.row && collectionCharacteristicWeahter.count > indexPath.row && collectionDegreesArray.count > indexPath.row{
+                saveCollectionViewLabelToCoreData(cashDays: cashDays, indexPath: indexPath)
+            }
+            
+            do {
+                try context.save()
+                print("Данные CollectionView успешно сохранены в Core Data")
+            } catch {
+                print("Ошибка сохранения данных CollectionView в Core Data: \(error)")
+            }
+            
+            return cell
+        } else {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "postCell", for: indexPath) as! PostCellCollectionViewCell
+            uploadCollectionViewLabels(cell: cell, indexPath: indexPath)
+            return cell
+        }
+    }
+
+    private func uploadCollectionViewLabels(cell : PostCellCollectionViewCell, indexPath : IndexPath) {
         if collectionHoursArray.count > 0 {
             cell.timeLabel.text = collectionHoursArray[indexPath.row]
         }
-
+        
         if collectionDegreesArray.count > 0 {
             cell.degreeLabel.text = String(collectionDegreesArray[indexPath.row])
         }
@@ -308,7 +537,12 @@ extension ViewController: UICollectionViewDataSource {
         if collectionCharacteristicWeahter.count > 0 {
             cell.imageWeather.image = getImageByState(collectionCharacteristicWeahter[indexPath.row])
         }
-        return cell
+    }
+    
+    private func saveCollectionViewLabelToCoreData(cashDays : NSManagedObject, indexPath : IndexPath) {
+        cashDays.setValue(collectionHoursArray[indexPath.row], forKey: "collectionHour")
+        cashDays.setValue(collectionCharacteristicWeahter[indexPath.row], forKey: "collectionWeather")
+        cashDays.setValue(collectionDegreesArray[indexPath.row], forKey: "collectionDegree")
     }
 }
 
